@@ -66,6 +66,8 @@ typedef struct _modbus_rtu {
 #if HAVE_DECL_TIOCM_RTS
     int rts;
     int rts_delay;
+    int rts_delay_before_write;
+    int rts_delay_after_write;
     int onebyte_time;
     void (*set_rts) (modbus_t *ctx, int on);
 #endif

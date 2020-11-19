@@ -284,11 +284,15 @@ static ssize_t _modbus_rtu_send(modbus_t *ctx, const uint8_t *req, int req_lengt
         }
 
         ctx_rtu->set_rts(ctx, ctx_rtu->rts == MODBUS_RTU_RTS_UP);
-        usleep(ctx_rtu->rts_delay);
+        usleep(ctx_rtu->rts_delay_before_write ? ctx_rtu->rts_delay_before_write : ctx_rtu->rts_delay);
 
         size = write(ctx->s, req, req_length);
 
-        usleep(ctx_rtu->onebyte_time * req_length + ctx_rtu->rts_delay);
+        if(ctx_rtu->rts_delay_after_write == 0)
+            tcdrain(ctx->s);
+        else
+            usleep(ctx_rtu->onebyte_time * req_length + ctx_rtu->rts_delay_after_write ? ctx_rtu->rts_delay_after_write : ctx_rtu->rts_delay);
+
         ctx_rtu->set_rts(ctx, ctx_rtu->rts != MODBUS_RTU_RTS_UP);
 
         return size;
@@ -1086,6 +1090,56 @@ int modbus_rtu_get_rts_delay(modbus_t *ctx)
     }
 }
 
+int modbus_rtu_get_rts_delay_before_write(modbus_t *ctx)
+{
+    if (ctx == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    if (ctx->backend->backend_type == _MODBUS_BACKEND_TYPE_RTU) {
+#if HAVE_DECL_TIOCM_RTS
+        modbus_rtu_t *ctx_rtu;
+        ctx_rtu = (modbus_rtu_t *)ctx->backend_data;
+        return ctx_rtu->rts_delay_before_write;
+#else
+        if (ctx->debug) {
+            fprintf(stderr, "This function isn't supported on your platform\n");
+        }
+        errno = ENOTSUP;
+        return -1;
+#endif
+    } else {
+        errno = EINVAL;
+        return -1;
+    }
+}
+
+int modbus_rtu_get_rts_delay_after_write(modbus_t *ctx)
+{
+    if (ctx == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    if (ctx->backend->backend_type == _MODBUS_BACKEND_TYPE_RTU) {
+#if HAVE_DECL_TIOCM_RTS
+        modbus_rtu_t *ctx_rtu;
+        ctx_rtu = (modbus_rtu_t *)ctx->backend_data;
+        return ctx_rtu->rts_delay_after_write;
+#else
+        if (ctx->debug) {
+            fprintf(stderr, "This function isn't supported on your platform\n");
+        }
+        errno = ENOTSUP;
+        return -1;
+#endif
+    } else {
+        errno = EINVAL;
+        return -1;
+    }
+}
+
 int modbus_rtu_set_rts_delay(modbus_t *ctx, int us)
 {
     if (ctx == NULL || us < 0) {
@@ -1098,6 +1152,58 @@ int modbus_rtu_set_rts_delay(modbus_t *ctx, int us)
         modbus_rtu_t *ctx_rtu;
         ctx_rtu = (modbus_rtu_t *)ctx->backend_data;
         ctx_rtu->rts_delay = us;
+        return 0;
+#else
+        if (ctx->debug) {
+            fprintf(stderr, "This function isn't supported on your platform\n");
+        }
+        errno = ENOTSUP;
+        return -1;
+#endif
+    } else {
+        errno = EINVAL;
+        return -1;
+    }
+}
+
+int modbus_rtu_set_rts_delay_before_write(modbus_t *ctx, int us)
+{
+    if (ctx == NULL || us < 0) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    if (ctx->backend->backend_type == _MODBUS_BACKEND_TYPE_RTU) {
+#if HAVE_DECL_TIOCM_RTS
+        modbus_rtu_t *ctx_rtu;
+        ctx_rtu = (modbus_rtu_t *)ctx->backend_data;
+        ctx_rtu->rts_delay_before_write = us;
+        return 0;
+#else
+        if (ctx->debug) {
+            fprintf(stderr, "This function isn't supported on your platform\n");
+        }
+        errno = ENOTSUP;
+        return -1;
+#endif
+    } else {
+        errno = EINVAL;
+        return -1;
+    }
+}
+
+int modbus_rtu_set_rts_delay_after_write(modbus_t *ctx, int us)
+{
+    if (ctx == NULL || us < 0) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    if (ctx->backend->backend_type == _MODBUS_BACKEND_TYPE_RTU) {
+#if HAVE_DECL_TIOCM_RTS
+        modbus_rtu_t *ctx_rtu;
+        ctx_rtu = (modbus_rtu_t *)ctx->backend_data;
+        ctx_rtu->rts_delay_after_write = us;
         return 0;
 #else
         if (ctx->debug) {
